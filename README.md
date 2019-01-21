@@ -9,6 +9,7 @@ Supported C# features:
   * Try-catch-finally
   * Using-statements
   * Constructor overloading
+  * Namespaces
 
 Supported FCL functions and classes:
 

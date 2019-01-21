@@ -59,7 +59,24 @@ namespace CsNut
                 return;
             }
 
+            var typeNamespace = Utilities.GetValue(typeSymbol.ContainingNamespace, true);
+            if ((typeNamespace != null) && !this.minimize)
+            {
+                var namespaces = this.context.GetUnintroducedNamespaces(typeNamespace);
+                foreach (var ns in namespaces)
+                {
+                    text.Append($"{ns} <- {{}};");
+                    NewLine();
+                }
+            }
+
             text.Append("class ");
+            if (typeNamespace != null)
+            {
+                text.Append(typeNamespace);
+                text.Append(".");
+            }
+
             text.Append(name);
             if ((typeSymbol.BaseType != null) && (typeSymbol.BaseType.SpecialType == SpecialType.None))
             {
@@ -141,17 +158,26 @@ namespace CsNut
 
         private void CreateConstructor(List<ConstructorDeclarationSyntax> constructors, List<FieldDeclarationSyntax> fields)
         {
-            text.Append("constructor(");            
-            if (constructors.Count == 1)
+            if ((constructors.Count == 0) && (fields.Count == 0))
+            {
+                return;
+            }
+
+            text.Append("constructor");
+            if (constructors.Count == 0)
+            {
+                text.Append("()");
+            }
+            else if (constructors.Count == 1)
             {
                 Write(constructors[0].ParameterList);
             }
             else if (constructors.Count > 1)
             {
-                text.Append("...");
+                text.Append("(...)");
             }
 
-            text.Append(") {");
+            text.Append("{");
             NewLine(1);
             foreach (var field in fields)
             {
@@ -356,8 +382,25 @@ namespace CsNut
 
         internal void Write(EnumDeclarationSyntax enumDeclarationSyntax, INamedTypeSymbol typeSymbol)
         {
-            text.Append("enum ");
             var symbol = this.semanticModel.GetDeclaredSymbol(enumDeclarationSyntax);
+            var typeNamespace = Utilities.GetValue(typeSymbol.ContainingNamespace, true);
+            if ((typeNamespace != null) && !this.minimize)
+            {
+                var namespaces = this.context.GetUnintroducedNamespaces(typeNamespace);
+                foreach (var ns in namespaces)
+                {
+                    text.Append($"{ns} <- {{}};");
+                    NewLine();
+                }
+            }
+
+            text.Append("enum ");
+            if (typeNamespace != null)
+            {
+                text.Append(typeNamespace);
+                text.Append(".");
+            }
+
             text.Append(this.context.GetName(symbol, enumDeclarationSyntax.Identifier.Text));
             NewLine();
             text.Append("{");
@@ -670,6 +713,15 @@ namespace CsNut
                 }
 
             }
+            else if (symbol is INamespaceOrTypeSymbol namespaceOrTypeSymbol)
+            {
+                var ns = Utilities.GetValue(namespaceOrTypeSymbol.ContainingNamespace, true);
+                if (ns != null)
+                {
+                    text.Append(ns);
+                    text.Append(".");
+                }
+            }
 
             text.Append(this.context.GetName(symbol, identifierNameSyntax.Identifier.Text));
             if ((symbol is IPropertySymbol) && (this.context.PropertyMode == PropertyMode.Read))
@@ -720,10 +772,10 @@ namespace CsNut
                 }
 
                 WriteComment("new");
-                string newName = this.context.GetName(namedTypeSymbol, "#defaultName#");
-                if (!string.IsNullOrEmpty(newName))
+                string newName = this.context.GetName(namedTypeSymbol, null);
+                if (newName != string.Empty)
                 {
-                    if (newName != "#defaultName#")
+                    if (!string.IsNullOrEmpty(newName))
                     {
                         text.Append(newName);
                     }
@@ -925,6 +977,16 @@ namespace CsNut
         private void Write(SimpleNameSyntax simpleNameSyntax)
         {
             var symbolInfo = semanticModel.GetSymbolInfo(simpleNameSyntax);
+            if (symbolInfo.Symbol is INamespaceOrTypeSymbol)
+            {
+                var ns = Utilities.GetValue(symbolInfo.Symbol.ContainingNamespace, true);
+                if (ns != null)
+                {
+                    text.Append(ns);
+                    text.Append(".");
+                }
+            }
+
             text.Append(this.context.GetName(symbolInfo.Symbol, simpleNameSyntax.Identifier.Text));
             if ((symbolInfo.Symbol is IPropertySymbol) && (this.context.PropertyMode == PropertyMode.Read))
             {

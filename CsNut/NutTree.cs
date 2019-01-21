@@ -99,6 +99,11 @@ namespace CsNut
             }
 
             context.AddToScript(mainText);
+            var entryNs = Utilities.GetValue(entryPoint.ContainingNamespace, true);
+            if (!string.IsNullOrEmpty(entryNs))
+            {
+                mainText.Append($"class {entryPoint.Name} extends {entryNs}.{entryPoint.Name}{{}}");
+            }
         }
 
         private void GenerateInfo(INamedTypeSymbol entryPoint, CompilationContext context)

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -172,7 +173,7 @@ class MyClass {
         }
 
         [TestMethod]
-        [ExpectedException(typeof(NotImplementedException))]
+        [ExpectedException(typeof(UnsupportedSyntaxException))]
         public async Task TestLock()
         {
             var input = @"
@@ -305,6 +306,54 @@ class MyClass {
             AreEqual(RemoveExtraSpaces(expected), RemoveExtraSpaces(compilationResult));
         }
 
+        [TestMethod]
+        public async Task TestNamespaces()
+        {
+            var input = @"
+namespace Main {
+    public class MyClass {
+        public void DoWork() {
+            var other = new Other.Sub.MyClass();
+            var c2 = new Class2();
+            other.DoWork();
+        }
+    }
+
+    public class Class2 {
+    }
+}
+
+namespace Other.Sub {
+    public class MyClass {
+        public void DoWork() {
+        }
+    }
+}";
+
+            var expected = @"
+Main <- {};
+class Main.MyClass {
+    function DoWork() {
+        local other = /*new*/Other.Sub.MyClass();
+        local c2 = /*new*/Main.Class2();
+        other.DoWork();
+    }
+}
+
+class Main.Class2 {
+}
+
+Other <- {};
+Other.Sub <- {};
+class Other.Sub.MyClass {
+    function DoWork() {
+    }
+}";
+
+            var compilationResult = await CompileAsync(input);
+            AreEqual(RemoveExtraSpaces(expected), RemoveExtraSpaces(compilationResult));
+        }
+
         private async Task<string> CompileAsync(string input)
         {
             var ws = new AdhocWorkspace();
@@ -321,18 +370,15 @@ class MyClass {
             StringBuilder resultBuilder = new StringBuilder();
             var context = new CompilationContext();
             var writer = new NodeWriter(model, resultBuilder, context);
-            foreach (var node in tree.GetRoot().ChildNodes())
+            foreach (var classDeclarationSyntax in tree.GetRoot().DescendantNodesAndSelf().OfType<ClassDeclarationSyntax>())
             {
-                if (node is ClassDeclarationSyntax classDeclarationSyntax)
+                var symbol = model.GetDeclaredSymbol(classDeclarationSyntax);
+                if (context.MainAssembly == null)
                 {
-                    var symbol = model.GetDeclaredSymbol(classDeclarationSyntax);
-                    if (context.MainAssembly == null)
-                    {
-                        context.MainAssembly = symbol.ContainingAssembly;
-                    }
-
-                    writer.Write(classDeclarationSyntax, symbol);
+                    context.MainAssembly = symbol.ContainingAssembly;
                 }
+
+                writer.Write(classDeclarationSyntax, symbol);
             }
 
             return resultBuilder.ToString();

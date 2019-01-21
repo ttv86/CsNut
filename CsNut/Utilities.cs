@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
+using System.Text.RegularExpressions;
+using Microsoft.CodeAnalysis;
 
 namespace CsNut
 {
@@ -51,7 +53,7 @@ namespace CsNut
 
         internal static string EscapeString(string value)
         {
-            return value;
+            return Regex.Replace(value, "[\t\n\r\0\"\\\\]", m => @"\" + m.Value);
         }
 
         internal static IEnumerable<string> CreateNameGenerator()
@@ -67,6 +69,21 @@ namespace CsNut
                 } while (reserved.Contains(result));
                 yield return result;
             }
+        }
+
+        internal static string GetValue(INamespaceSymbol namespaceValue, bool skipOpenTTD)
+        {
+            if (skipOpenTTD && (namespaceValue.ContainingAssembly.Name == "OTTDLib"))
+            {
+                return null;
+            }
+
+            if ((namespaceValue == null)||namespaceValue.IsGlobalNamespace)
+            {
+                return null;
+            }
+            
+            return namespaceValue.ToString();
         }
 
         private static string LongToString(ulong value)

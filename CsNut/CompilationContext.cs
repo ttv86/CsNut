@@ -22,6 +22,7 @@ namespace CsNut
         private readonly Dictionary<string, string> createdNames = new Dictionary<string, string>();
         private readonly Dictionary<string, string> builtInNames = new Dictionary<string, string>();
         private readonly Dictionary<string, string> generatedBuiltins = new Dictionary<string, string>();
+        private readonly HashSet<string> introducedNamespaces = new HashSet<string>();
 
         public bool Uglify { get; internal set; }
 
@@ -55,10 +56,9 @@ namespace CsNut
         internal string GetName(ISymbol symbol, string defaultValue)
         {
             string fullName = this.GetFullName(symbol, out string prefix);
-
             if (fullName != null)
             {
-                if (fullName.EndsWith(".ToString"))
+                if (fullName.EndsWith(".ToString") && (symbol is IMethodSymbol))
                 {
                     return "tostring";
                 }
@@ -69,6 +69,11 @@ namespace CsNut
                 }
             }
 
+            if (defaultValue == null)
+            {
+                return null;
+            }
+            
             return prefix + defaultValue;
         }
 
@@ -83,9 +88,9 @@ namespace CsNut
             {
                 return LibraryHelper.GetFullName(fieldSymbol);
             }
-            else if (symbol is INamedTypeSymbol namedTypeSymbol)
+            else if (symbol is INamespaceOrTypeSymbol namespaceOrTypeSymbol)
             {
-                return LibraryHelper.GetFullName(namedTypeSymbol);
+                return LibraryHelper.GetFullName(namespaceOrTypeSymbol);
             }
             else if (symbol is ILocalSymbol localSymbol)
             {
@@ -148,7 +153,7 @@ namespace CsNut
             throw new InvalidOperationException();
         }
 
-        public void MakeUglified(ISymbol symbol)
+        internal void MakeUglified(ISymbol symbol)
         {
             if (!this.Uglify)
             {
@@ -186,6 +191,23 @@ namespace CsNut
 
             result = null;
             return false;
+        }
+
+        internal List<string> GetUnintroducedNamespaces(string name)
+        {
+            List<string> result = new List<string>();
+            var parts = name.Split('.');
+            for (int i = 0; i < parts.Length; i++)
+            {
+                var ns = string.Join(".", parts, 0, i + 1);
+                if (!this.introducedNamespaces.Contains(ns))
+                {
+                    this.introducedNamespaces.Add(ns);
+                    result.Add(ns);
+                }
+            }
+
+            return result;
         }
     }
 }

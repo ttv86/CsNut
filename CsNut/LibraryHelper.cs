@@ -32,29 +32,19 @@ namespace CsNut
             return IsBaseClass(symbol) && GetFullName(symbol) == name;
         }
 
-        internal static string GetFullName(INamedTypeSymbol typeSymbol)
+        internal static string GetFullName(INamespaceOrTypeSymbol namespaceOrTypeSymbol)
         {
             StringBuilder sb = new StringBuilder();
-            sb.Append(typeSymbol.ContainingAssembly.Name);
+            sb.Append(namespaceOrTypeSymbol.ContainingAssembly.Name);
             sb.Append("!");
-            List<INamespaceSymbol> namespaceList = new List<INamespaceSymbol>();
-            INamespaceSymbol namespaceSymbol = typeSymbol.ContainingNamespace;
-            while (namespaceSymbol != null)
+            var ns = Utilities.GetValue(namespaceOrTypeSymbol.ContainingNamespace, false);
+            if (ns != null)
             {
-                namespaceList.Add(namespaceSymbol);
-                namespaceSymbol = namespaceSymbol.ContainingNamespace;
+                sb.Append(ns);
+                sb.Append(".");
             }
 
-            for (int i = namespaceList.Count - 1; i >= 0; i--)
-            {
-                if (!string.IsNullOrEmpty(namespaceList[i].Name))
-                {
-                    sb.Append(namespaceList[i].Name);
-                    sb.Append(".");
-                }
-            }
-
-            sb.Append(typeSymbol.Name);
+            sb.Append(namespaceOrTypeSymbol.Name);
             return sb.ToString();
         }
 

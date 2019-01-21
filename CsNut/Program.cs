@@ -76,6 +76,7 @@ namespace CsNut
 
                     if (entryPointCandidates.Count != 1)
                     {
+                        Console.WriteLine($"Found {entryPointCandidates.Count} entry points.");
                         return 2;
                     }
 
