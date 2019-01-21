@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net461</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\OTTDLib\OTTDLib.csproj" />
+  </ItemGroup>
+
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="&quot;$(SolutionDir)\CsNut\$(OutDir)\CsNut.exe&quot; &quot;$(ProjectPath)&quot; --out &quot;C:\Users\Timo Virkki\Documents\OpenTTD\ai\CsTestAi&quot;" />
+  </Target>
+
+</Project>
