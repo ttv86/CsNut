@@ -8,22 +8,25 @@ namespace NutTester
     {
         protected override void Start()
         {
-            Method1();
-            Method1(1);
-            Method1(1, 1);
-        }
+            double a = 1d;
+            double b = 2d;
+            double c = 5d;
+            double f1()
+            {
+                return b / 2d;
+            }
 
-        public void Method1()
-        {
+            double f2()
+            {
+                return c / 2d;
+            }
 
-        }
-        public void Method1(int a)
-        {
-
-        }
-        public void Method1(int a, int b)
-        {
-
+            while (true)
+            {
+                AILog.Info(f2().ToString());
+                c++;
+                Sleep(10);
+            }
         }
     }
 }

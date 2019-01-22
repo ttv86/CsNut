@@ -53,6 +53,8 @@ namespace CsNut
 
         public IAssemblySymbol LibraryAssembly { get; internal set; }
 
+        public ClosureInfo ClosureInfo { get; internal set; }
+
         internal string GetName(ISymbol symbol, string defaultValue)
         {
             string fullName = this.GetFullName(symbol, out string prefix);

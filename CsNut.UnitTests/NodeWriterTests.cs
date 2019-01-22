@@ -476,6 +476,61 @@ class MyClass {
     }
 }";
 
+
+            var compilationResult = await CompileAsync(input);
+            AreEqual(RemoveExtraSpaces(expected), RemoveExtraSpaces(compilationResult));
+        }
+
+        [TestMethod]
+        public async Task TestNestedMethod()
+        {
+            string input = @"
+class MyClass {
+    static void DoWork() {
+		var a = 5;
+		var b = 5;
+		var c = 5;
+		double f1() { return b + 1; }
+		double f2() { return c + 1; }
+		double f3() { return b + c; }
+		for (var i = 0; i < 10; i++) {
+			Log(f1());
+			Log(f2());
+			Log(f3());
+			a += 1;
+			b += 2;
+			c += 3;
+		}
+	}
+
+    static double Log(double value) {
+    }
+}";
+
+            string expected = @"
+class MyClass {
+    static function DoWork() {
+		local _uq_a = {};
+		local a = 5;
+		_uq_a.b <- 5;
+		_uq_a.c <- 5;
+		local f1 = function(_uq_a) { return (_uq_a.b + 1); };
+		local f2 = function(_uq_a) { return (_uq_a.c + 1); };
+		local f3 = function(_uq_a) { return (_uq_a.b + _uq_a.c); };
+		for (local i = 0; (i < 10); i++) {
+			MyClass.Log(f1(_uq_a));
+			MyClass.Log(f2(_uq_a));
+			MyClass.Log(f3(_uq_a));
+			a += 1;
+			_uq_a.b += 2;
+			_uq_a.c += 3;
+		}
+	}
+
+    static function Log(value) {
+    }
+}";
+
             var compilationResult = await CompileAsync(input);
             AreEqual(RemoveExtraSpaces(expected), RemoveExtraSpaces(compilationResult));
         }

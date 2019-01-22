@@ -447,6 +447,7 @@ namespace CsNut
                 text.Append("static ");
             }
 
+            var symbol = this.semanticModel.GetDeclaredSymbol(methodDeclarationSyntax) as IMethodSymbol;
             string name = methodDeclarationSyntax.Identifier.Text;
             if (name == "ToString")
             {
@@ -456,7 +457,7 @@ namespace CsNut
             {
                 if (!methodDeclarationSyntax.Modifiers.Any(s => s.Text == "override"))
                 {
-                    name = this.context.GetName(this.semanticModel.GetDeclaredSymbol(methodDeclarationSyntax), name);
+                    name = this.context.GetName(symbol, name);
                 }
             }
 
@@ -465,11 +466,42 @@ namespace CsNut
             Write(methodDeclarationSyntax.ParameterList);
             if (methodDeclarationSyntax.Body != null)
             {
-                Write(methodDeclarationSyntax.Body);
+                text.Append("{");
+                NewLine(1);
+                var nestedMethods = methodDeclarationSyntax.DescendantNodes().OfType<LocalFunctionStatementSyntax>().ToList();
+                if (nestedMethods.Count > 0)
+                {
+                    var closureName = this.context.GenerateUniqueName();
+                    text.Append($"local {closureName} = {{}};");
+                    NewLine();
+                    this.context.ClosureInfo = new ClosureInfo(closureName);
+                    foreach (var nested in nestedMethods)
+                    {
+                        this.context.ClosureInfo.Methods.Add(this.semanticModel.GetDeclaredSymbol(nested) as IMethodSymbol);
+                        foreach (var identifier in nested.DescendantNodes().OfType<IdentifierNameSyntax>())
+                        {
+                            if ((this.semanticModel.GetSymbolInfo(identifier).Symbol is ILocalSymbol localSymbol) && (localSymbol.ContainingSymbol == symbol))
+                            {
+                                this.context.ClosureInfo.Locals.Add(localSymbol);
+                            }
+                        }
+                    }
+                }
+
+                Write(methodDeclarationSyntax.Body, true);
+                NewLine(-1);
+                text.Append("}");
+                NewLine();
+                this.context.ClosureInfo = null;
             }
             else if (methodDeclarationSyntax.ExpressionBody != null)
             {
-                text.Append("{ return ");
+                text.Append("{");
+                if (!symbol.ReturnsVoid)
+                {
+                    text.Append("return ");
+                }
+
                 Write(methodDeclarationSyntax.ExpressionBody.Expression);
                 text.Append("}");
                 NewLine();
@@ -655,27 +687,55 @@ namespace CsNut
             text.Append(";");
         }
 
-        private void Write(VariableDeclarationSyntax variableDeclarationSyntax, bool noLocal = false, bool initializeWithNullIfUninitialized = false)
+        private void Write(VariableDeclarationSyntax variableDeclarationSyntax)
         {
-            if (!noLocal)
+            bool localOpen = false;
+            foreach (var variable in variableDeclarationSyntax.Variables)
             {
-                text.Append("local ");
-            }
+                var symbolInfo = semanticModel.GetDeclaredSymbol(variable);
+                if (symbolInfo is ILocalSymbol localSymbol)
+                {
+                    if ((this.context.ClosureInfo != null) && this.context.ClosureInfo.Locals.Contains(localSymbol))
+                    {
+                        if (variable.Initializer == null)
+                        {
+                            continue;
+                        }
 
-            Write(variableDeclarationSyntax.Variables, variable => Write(variable, initializeWithNullIfUninitialized));
+                        if (localOpen)
+                        {
+                            text.Append(";");
+                            localOpen = false;
+                        }
+                        
+                        text.Append($"{this.context.ClosureInfo.Name}.{this.context.GetName(localSymbol, variable.Identifier.Text)}<-");
+                        Write(variable.Initializer.Value);
+                        NewLine();
+                        continue;
+                    }
+                }
+
+                if (!localOpen)
+                {
+                    text.Append("local ");
+                    localOpen = true;
+                }
+                else
+                {
+                    text.Append(",");
+                }
+
+                Write(variable);
+            }
         }
 
-        private void Write(VariableDeclaratorSyntax variableDeclaratorSyntax, bool initializeWithNullIfUninitialized = false)
+        private void Write(VariableDeclaratorSyntax variableDeclaratorSyntax)
         {
             var symbolInfo = semanticModel.GetDeclaredSymbol(variableDeclaratorSyntax);
             text.Append(this.context.GetName(symbolInfo, variableDeclaratorSyntax.Identifier.Text));
             if (variableDeclaratorSyntax.Initializer != null)
             {
                 Write(variableDeclaratorSyntax.Initializer);
-            }
-            else if (initializeWithNullIfUninitialized)
-            {
-                text.Append("=null");
             }
         }
 
@@ -688,7 +748,8 @@ namespace CsNut
         private void Write(IdentifierNameSyntax identifierNameSyntax)
         {
             var symbol = this.semanticModel.GetSymbolInfo(identifierNameSyntax).Symbol;
-            if ((symbol is IPropertySymbol) || (symbol is IMethodSymbol) || (symbol is IFieldSymbol))
+            //if ((symbol is IPropertySymbol) || (symbol is IMethodSymbol) || (symbol is IFieldSymbol))
+            if ((symbol != null) && (symbol.ContainingSymbol is ITypeSymbol))
             {
                 ITypeSymbol statementSymbol = null;
                 SyntaxNode node = identifierNameSyntax;
@@ -707,7 +768,7 @@ namespace CsNut
                 {
                     if (symbol.ContainingType == statementSymbol)
                     {
-                        if (symbol.ContainingType.IsStatic)
+                        if (symbol.IsStatic)
                         {
                             text.Append(this.context.GetName(symbol.ContainingType, symbol.ContainingType.Name));
                         }
@@ -715,6 +776,7 @@ namespace CsNut
                         {
                             text.Append("this");
                         }
+
                         text.Append(".");
                         break;
                     }
@@ -731,6 +793,10 @@ namespace CsNut
                     text.Append(ns);
                     text.Append(".");
                 }
+            }
+            else if ((symbol is ILocalSymbol localSymbol) && (this.context.ClosureInfo != null) && this.context.ClosureInfo.Locals.Contains(localSymbol))
+            {
+                text.Append($"{this.context.ClosureInfo.Name}.");
             }
 
             text.Append(this.context.GetName(symbol, identifierNameSyntax.Identifier.Text));
@@ -840,9 +906,18 @@ namespace CsNut
             }
         }
 
-        private void Write(ArgumentListSyntax argumentListSyntax)
+        private void Write(ArgumentListSyntax argumentListSyntax, string firstArgument = null)
         {
             text.Append("(");
+            if (firstArgument != null)
+            {
+                text.Append($"{firstArgument}");
+                if (argumentListSyntax.Arguments.Count > 0)
+                {
+                    text.Append(",");
+                }
+            }
+
             Write(argumentListSyntax.Arguments);
             text.Append(")");
         }
@@ -852,9 +927,18 @@ namespace CsNut
             Write(argumentSyntax.Expression);
         }
 
-        private void Write(ParameterListSyntax parameterListSyntax)
+        private void Write(ParameterListSyntax parameterListSyntax, string firstParameter = null)
         {
             text.Append("(");
+            if (firstParameter != null)
+            {
+                text.Append($"{firstParameter}");
+                if (parameterListSyntax.Parameters.Count > 0)
+                {
+                    text.Append(",");
+                }
+            }
+
             Write(parameterListSyntax.Parameters);
             text.Append(")");
         }
@@ -934,6 +1018,7 @@ namespace CsNut
         private void Write(InvocationExpressionSyntax invocationExpressionSyntax)
         {
             var symbolInfo = semanticModel.GetSymbolInfo(invocationExpressionSyntax.Expression);
+            string closureName = null;
             if (symbolInfo.Symbol is IMethodSymbol methodSymbol)
             {
                 string fullName = LibraryHelper.GetFullName(methodSymbol);
@@ -941,10 +1026,15 @@ namespace CsNut
                 {
                     return;
                 }
+
+                if ((this.context.ClosureInfo != null) && this.context.ClosureInfo.Methods.Contains(methodSymbol))
+                {
+                    closureName = this.context.ClosureInfo.Name;
+                }
             }
 
             Write(invocationExpressionSyntax.Expression);
-            Write(invocationExpressionSyntax.ArgumentList);
+            Write(invocationExpressionSyntax.ArgumentList, closureName);
         }
 
         private void Write(MemberAccessExpressionSyntax memberAccessExpressionSyntax)
@@ -1814,12 +1904,37 @@ namespace CsNut
 
         private void Write(LocalFunctionStatementSyntax localFunctionStatementSyntax)
         {
-            throw new NotImplementedException();
+            var symbol = this.semanticModel.GetDeclaredSymbol(localFunctionStatementSyntax) as IMethodSymbol;
+            string name = localFunctionStatementSyntax.Identifier.Text;
+            text.Append($"local {name} = function");
+            string closureName = null;
+            if ((this.context.ClosureInfo != null) && this.context.ClosureInfo.Methods.Contains(symbol))
+            {
+                closureName = this.context.ClosureInfo.Name;
+            }
+
+            Write(localFunctionStatementSyntax.ParameterList, closureName);
+            if (localFunctionStatementSyntax.Body != null)
+            {
+                Write(localFunctionStatementSyntax.Body);
+                text.Append(";");
+            }
+            else if (localFunctionStatementSyntax.ExpressionBody != null)
+            {
+                text.Append("{");
+                if (!symbol.ReturnsVoid)
+                {
+                    text.Append("return ");
+                }
+
+                Write(localFunctionStatementSyntax.ExpressionBody.Expression);
+                text.Append("};");
+                NewLine();
+            }
         }
         
         private void Write(EmptyStatementSyntax emptyStatementSyntax)
         {
-            throw new NotImplementedException();
         }
 
         private void Write(LabeledStatementSyntax labeledStatementSyntax)

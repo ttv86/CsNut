@@ -11,6 +11,7 @@ Supported C# features:
   * Namespaces
   * Enums
   * Lambdas
+  * Nested methods
 
 Unsupported C# features:
   * Async/await
