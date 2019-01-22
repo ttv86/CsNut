@@ -136,7 +136,7 @@ namespace CsNut
             else if (!generatedBuiltins.ContainsKey(fullName))
             {
                 string value;
-                if (BuiltInScripts.StaticFuncs.TryGetValue(fullName, out value))
+                if (BuiltInScripts.NewFuncs.TryGetValue(fullName, out value))
                 {
                     string uniqueName = this.GenerateUniqueName();
                     value = value.Replace("%%FUNCNAME%%", uniqueName);
@@ -144,7 +144,7 @@ namespace CsNut
                     generatedBuiltins.Add(fullName, value);
                     return uniqueName;
                 }
-                else if (BuiltInScripts.InstanceFuncs.TryGetValue(fullName, out value))
+                else if (BuiltInScripts.InlineChanges.TryGetValue(fullName, out value))
                 {
                     return value;
                 }

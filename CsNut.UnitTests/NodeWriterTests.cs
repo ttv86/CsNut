@@ -435,6 +435,51 @@ class MyClass {
             AreEqual(RemoveExtraSpaces(expected), RemoveExtraSpaces(compilationResult));
         }
 
+        [TestMethod]
+        public async Task TestLambda()
+        {
+            var input = @"
+public static class MyClass {    
+    public static int DoWork() {
+        DoSomething1(a => a.ToString());
+        DoSomething1(a => {});
+        return DoSomething2((a, b) => a + b);
+    }
+
+    public static int DoSomething1(System.Action<int> func)
+    {
+        func(1);
+    }
+
+    public static int DoSomething2(System.Func<int, int, int> func)
+    {
+        return func(1, 2);
+    }
+}";
+
+            var expected = @"
+class MyClass {
+    static function DoWork() {
+        MyClass.DoSomething1(function (a) { a.tostring(); });
+        MyClass.DoSomething1(function (a) { });
+        return MyClass.DoSomething2(function (a, b) { return (a + b); });
+    }
+
+    static function DoSomething1(func)
+    {
+        func(1);
+    }
+
+    static function DoSomething2(func)
+    {
+        return func(1, 2);
+    }
+}";
+
+            var compilationResult = await CompileAsync(input);
+            AreEqual(RemoveExtraSpaces(expected), RemoveExtraSpaces(compilationResult));
+        }
+
         private async Task<string> CompileAsync(string input)
         {
             var ws = new AdhocWorkspace();

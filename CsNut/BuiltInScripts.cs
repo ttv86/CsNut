@@ -8,16 +8,20 @@ namespace CsNut
 {
     internal class BuiltInScripts
     {
-        internal static readonly Dictionary<string, string> StaticFuncs = new Dictionary<string, string>()
+        internal static readonly Dictionary<string, string> NewFuncs = new Dictionary<string, string>()
         {
-            { "mscorlib!System.Math.Min", "function %%FUNCNAME%%(a,b){return a<b?a:b;}"},
-            { "mscorlib!System.Math.Max", "function %%FUNCNAME%%(a,b){return a>b?a:b;}"},
-            { "mscorlib!System.Math.Abs", "function %%FUNCNAME%%(a){return a<0?-a:a;}"},
-            { "mscorlib!System.String.IsNullOrEmpty", "function %%FUNCNAME%%(a){return a==null||a==\"\";}"},
-            { "mscorlib!System.String.Join", "function %%FUNCNAME%%(a,b){local r=\"\";for(local c=0;c<b.len();c++){if(c>0){r+=a};r+=b[c].tostring()}return r;}"},
+            { "mscorlib!System.Math.Min", "function %%FUNCNAME%%(a,b){return a<b?a:b}"},
+            { "mscorlib!System.Math.Max", "function %%FUNCNAME%%(a,b){return a>b?a:b}"},
+            { "mscorlib!System.Math.Abs", "function %%FUNCNAME%%(a){return a<0?-a:a}"},
+            { "mscorlib!System.Math.Sign", "function %%FUNCNAME%%(a){return a<0?-1:1}"},
+            { "mscorlib!System.Math.Round", "function %%FUNCNAME%%(a){a=a-0.5;local i=a.tointeger();if(i==a){return i}else if(a>0){i+=1};;return i}"},
+            { "mscorlib!System.Math.Ceiling", "function %%FUNCNAME%%(a){local i=a.tointeger();if(i==a){return i}else if(a>0){i+=1};;return i}"},
+            { "mscorlib!System.Math.Floor", "function %%FUNCNAME%%(a){local i=a.tointeger();if(i==a){return i}else if(a<0){i-=1};;return i}"},
+            { "mscorlib!System.String.IsNullOrEmpty", "function %%FUNCNAME%%(a){return a==null||a==\"\"}"},
+            { "mscorlib!System.String.Join", "function %%FUNCNAME%%(a,b){local r=\"\";for(local c=0;c<b.len();c++){if(c>0){r+=a};r+=b[c].tostring()}return r}"},
         };
 
-        internal static readonly Dictionary<string, string> InstanceFuncs = new Dictionary<string, string>()
+        internal static readonly Dictionary<string, string> InlineChanges = new Dictionary<string, string>()
         {
             {"mscorlib!System.Object.ToString", "%%EXPR%%.tostring"},
             {"mscorlib!System.Int32.ToString", "%%EXPR%%.tostring"},
@@ -29,6 +33,9 @@ namespace CsNut
             {"mscorlib!System.String.ToUpperInvariant", "%%EXPR%%.toupper"},
             {"mscorlib!System.String.get_Length", "%%EXPR%%.len()"},
             {"mscorlib!System.Array.get_Length", "%%EXPR%%.len()"},
+
+            { "mscorlib!System.Math.PI", "(3.1415926535897931)"},
+            { "mscorlib!System.Math.E", "(2.7182818284590451)"},
 
             {"mscorlib!System.Collections.Generic.List.Add", "%%EXPR%%.push"},
             {"mscorlib!System.Collections.Generic.List.AddRange", "%%EXPR%%.extend"},

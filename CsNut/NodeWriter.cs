@@ -1545,12 +1545,51 @@ namespace CsNut
 
         private void Write(SimpleLambdaExpressionSyntax simpleLambdaExpressionSyntax)
         {
-            throw new NotImplementedException();
+            text.Append("function(");
+            if (simpleLambdaExpressionSyntax.Parameter != null)
+            {
+                Write(simpleLambdaExpressionSyntax.Parameter);
+            }
+
+            text.Append(")");
+            if (simpleLambdaExpressionSyntax.Body is BlockSyntax blockSyntax)
+            {
+                Write(blockSyntax);
+            }
+            else
+            {
+                var symbol = this.semanticModel.GetSymbolInfo(simpleLambdaExpressionSyntax).Symbol as IMethodSymbol;
+                text.Append("{");
+                if (!symbol.ReturnsVoid)
+                {
+                    text.Append("return ");
+                }
+
+                Write(simpleLambdaExpressionSyntax.Body);
+                text.Append(";}");
+            }
         }
 
         private void Write(ParenthesizedLambdaExpressionSyntax parenthesizedLambdaExpressionSyntax)
         {
-            throw new NotImplementedException();
+            text.Append("function");
+            Write(parenthesizedLambdaExpressionSyntax.ParameterList);
+            if (parenthesizedLambdaExpressionSyntax.Body is BlockSyntax blockSyntax)
+            {
+                Write(blockSyntax);
+            }
+            else
+            {
+                var symbol = this.semanticModel.GetSymbolInfo(parenthesizedLambdaExpressionSyntax).Symbol as IMethodSymbol;
+                text.Append("{");
+                if (!symbol.ReturnsVoid)
+                {
+                    text.Append("return ");
+                }
+
+                Write(parenthesizedLambdaExpressionSyntax.Body);
+                text.Append(";}");
+            }
         }
 
         private void Write(RefExpressionSyntax refExpressionSyntax)
@@ -1755,7 +1794,7 @@ namespace CsNut
         
         private void Write(DestructorDeclarationSyntax destructorDeclarationSyntax)
         {
-            throw new NotImplementedException();
+            throw new UnsupportedSyntaxException("Destructors are not supported", destructorDeclarationSyntax);
         }
 
         private void Write(EventDeclarationSyntax eventDeclarationSyntax)
@@ -1985,101 +2024,6 @@ namespace CsNut
         }
 
         private void Write(BracketedParameterListSyntax bracketedParameterListSyntax)
-        {
-            throw new NotImplementedException();
-        }
-
-        private void Write(SkippedTokensTriviaSyntax skippedTokensTriviaSyntax)
-        {
-            throw new NotImplementedException();
-        }
-
-        private void Write(DocumentationCommentTriviaSyntax documentationCommentTriviaSyntax)
-        {
-            throw new NotImplementedException();
-        }
-
-        private void Write(IfDirectiveTriviaSyntax ifDirectiveTriviaSyntax)
-        {
-            throw new NotImplementedException();
-        }
-
-        private void Write(ElifDirectiveTriviaSyntax elifDirectiveTriviaSyntax)
-        {
-            throw new NotImplementedException();
-        }
-
-        private void Write(ElseDirectiveTriviaSyntax elseDirectiveTriviaSyntax)
-        {
-            throw new NotImplementedException();
-        }
-
-        private void Write(EndIfDirectiveTriviaSyntax endIfDirectiveTriviaSyntax)
-        {
-            throw new NotImplementedException();
-        }
-
-        private void Write(RegionDirectiveTriviaSyntax regionDirectiveTriviaSyntax)
-        {
-            throw new NotImplementedException();
-        }
-
-        private void Write(EndRegionDirectiveTriviaSyntax endRegionDirectiveTriviaSyntax)
-        {
-            throw new NotImplementedException();
-        }
-
-        private void Write(ErrorDirectiveTriviaSyntax errorDirectiveTriviaSyntax)
-        {
-            throw new NotImplementedException();
-        }
-
-        private void Write(WarningDirectiveTriviaSyntax warningDirectiveTriviaSyntax)
-        {
-            throw new NotImplementedException();
-        }
-
-        private void Write(BadDirectiveTriviaSyntax badDirectiveTriviaSyntax)
-        {
-            throw new NotImplementedException();
-        }
-
-        private void Write(DefineDirectiveTriviaSyntax defineDirectiveTriviaSyntax)
-        {
-            throw new NotImplementedException();
-        }
-
-        private void Write(UndefDirectiveTriviaSyntax undefDirectiveTriviaSyntax)
-        {
-            throw new NotImplementedException();
-        }
-
-        private void Write(LineDirectiveTriviaSyntax lineDirectiveTriviaSyntax)
-        {
-            throw new NotImplementedException();
-        }
-
-        private void Write(PragmaWarningDirectiveTriviaSyntax pragmaWarningDirectiveTriviaSyntax)
-        {
-            throw new NotImplementedException();
-        }
-
-        private void Write(PragmaChecksumDirectiveTriviaSyntax pragmaChecksumDirectiveTriviaSyntax)
-        {
-            throw new NotImplementedException();
-        }
-
-        private void Write(ReferenceDirectiveTriviaSyntax referenceDirectiveTriviaSyntax)
-        {
-            throw new NotImplementedException();
-        }
-
-        private void Write(LoadDirectiveTriviaSyntax loadDirectiveTriviaSyntax)
-        {
-            throw new NotImplementedException();
-        }
-
-        private void Write(ShebangDirectiveTriviaSyntax shebangDirectiveTriviaSyntax)
         {
             throw new NotImplementedException();
         }
