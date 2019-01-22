@@ -394,7 +394,7 @@ namespace CsNut
                 }
             }
 
-            text.Append("enum ");
+            text.Append("class ");
             if (typeNamespace != null)
             {
                 text.Append(typeNamespace);
@@ -405,15 +405,25 @@ namespace CsNut
             NewLine();
             text.Append("{");
             NewLine(1);
-            Write(enumDeclarationSyntax.Members, member =>
+            object previousValue = -1;
+            this.Write(enumDeclarationSyntax.Members, member =>
             {
                 var memberSymbol = this.semanticModel.GetDeclaredSymbol(member);
                 text.Append(this.context.GetName(memberSymbol, member.Identifier.Text));
                 if (member.EqualsValue != null)
                 {
-                    Write(member.EqualsValue);
+                    var constant = this.semanticModel.GetConstantValue(member.EqualsValue.Value);
+                    if (constant.HasValue)
+                    {
+                        previousValue = constant.Value;
+                        text.Append($"={previousValue}");
+                        return;
+                    }
                 }
-            });
+
+                previousValue = Utilities.Increase(previousValue);
+                text.Append($"={previousValue}");
+            },";");
 
             NewLine(-1);
             text.Append("}");
@@ -1096,33 +1106,56 @@ namespace CsNut
 
         private void Write(TryStatementSyntax tryStatementSyntax)
         {
+            string errorStoreName = null;
+            if (tryStatementSyntax.Finally != null)
+            {
+                errorStoreName = this.context.GenerateUniqueName();
+                text.Append($"local {errorStoreName}=null;");
+                NewLine();
+            }
+
             text.Append("try");
             Write(tryStatementSyntax.Block);
-            if (tryStatementSyntax.Catches.Count != 1)
+            if (tryStatementSyntax.Catches.Count > 1)
             {
-                WriteComment("Only one catch is supported.");
+                throw new UnsupportedSyntaxException("No more than 1 catch is supported", tryStatementSyntax);
             }
-            else
-            {
-                text.Append("catch");
-                var catchItem = tryStatementSyntax.Catches[0];
-                text.Append("(");
-                if (catchItem.Declaration != null)
-                {
-                    text.Append(catchItem.Declaration.Identifier.Text);
-                }
-                else
-                {
-                    text.Append("__generatedError");
-                }
 
-                text.Append(")");
-                Write(catchItem.Block);
+            var catchItem = tryStatementSyntax.Catches.FirstOrDefault();
+            string errorVariableName;
+            if ((catchItem != null) && (catchItem.Declaration != null))
+            {
+                errorVariableName = catchItem.Declaration.Identifier.Text;
+            } else
+            {
+                errorVariableName = this.context.GenerateUniqueName();
             }
+
+            text.Append($"catch({errorVariableName}){{");
+            NewLine(1);
+            if (errorStoreName != null)
+            {
+                text.Append($"{errorStoreName} = {errorVariableName};");
+                NewLine();
+            }
+
+            if (catchItem != null)
+            {
+                Write(catchItem.Block, true);
+            }
+
+            NewLine(-1);
+            text.Append("}");
 
             if (tryStatementSyntax.Finally != null)
             {
-                WriteComment("Finally not supported.");
+                Write(tryStatementSyntax.Finally.Block, true);
+            }
+
+            if (errorStoreName != null)
+            {
+                text.Append($"if({errorStoreName}!=null){{throw {errorStoreName};}};");
+                NewLine();
             }
         }
 
@@ -1844,51 +1877,6 @@ namespace CsNut
         private void Write(LockStatementSyntax lockStatementSyntax)
         {
             throw new UnsupportedSyntaxException("Lock syntax is not supported", lockStatementSyntax);
-        }
-        
-        private void Write(ElseClauseSyntax elseClauseSyntax)
-        {
-            throw new NotImplementedException();
-        }
-        
-        private void Write(CasePatternSwitchLabelSyntax casePatternSwitchLabelSyntax)
-        {
-            throw new NotImplementedException();
-        }
-
-        private void Write(CaseSwitchLabelSyntax caseSwitchLabelSyntax)
-        {
-            throw new NotImplementedException();
-        }
-
-        private void Write(DefaultSwitchLabelSyntax defaultSwitchLabelSyntax)
-        {
-            throw new NotImplementedException();
-        }
-
-        private void Write(CatchClauseSyntax catchClauseSyntax)
-        {
-            throw new NotImplementedException();
-        }
-
-        private void Write(CatchDeclarationSyntax catchDeclarationSyntax)
-        {
-            throw new NotImplementedException();
-        }
-
-        private void Write(CatchFilterClauseSyntax catchFilterClauseSyntax)
-        {
-            throw new NotImplementedException();
-        }
-
-        private void Write(FinallyClauseSyntax finallyClauseSyntax)
-        {
-            throw new NotImplementedException();
-        }
-
-        private void Write(CompilationUnitSyntax compilationUnitSyntax)
-        {
-            throw new NotImplementedException();
         }
 
         private void Write(ExternAliasDirectiveSyntax externAliasDirectiveSyntax)

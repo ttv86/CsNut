@@ -10,6 +10,7 @@ Supported C# features:
   * Using-statements
   * Constructor overloading
   * Namespaces
+  * Enums
 
 Supported FCL functions and classes:
 

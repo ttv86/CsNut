@@ -354,6 +354,87 @@ class Other.Sub.MyClass {
             AreEqual(RemoveExtraSpaces(expected), RemoveExtraSpaces(compilationResult));
         }
 
+        [TestMethod]
+        public async Task TestEnums()
+        {
+            var input = @"
+public enum EnumElement
+{
+    Aaa = 1,
+    Bbb,
+    Ccc = 6,
+    Ddd,
+    Eee = Class2.Value
+}
+
+public static class Class2 {    
+    public const int Value = 0x80;
+}";
+
+            var expected = @"
+class EnumElement {
+    Aaa = 1;
+    Bbb = 2;
+    Ccc = 6;
+    Ddd = 7;
+    Eee = 128
+}
+
+class Class2 {
+    Value = null;
+    constructor() {
+        this.Value = 128;
+    }
+}";
+
+            var compilationResult = await CompileAsync(input);
+            AreEqual(RemoveExtraSpaces(expected), RemoveExtraSpaces(compilationResult));
+        }
+
+        [TestMethod]
+        public async Task TestTryFinally()
+        {
+            var input = @"
+public static class MyClass {    
+    public static int DoWork() {
+        try {
+            Log(1); // This may throw an exception
+        } finally {
+            Log(2); // Do this always
+        }
+
+        Log(3); // Do this only if we got here without errors.
+    }
+
+    public static void Log(int eventCode) {
+    }
+}";
+
+            var expected = @"
+class MyClass {
+    static function DoWork() {
+        local _uq_a = null;
+        try {
+            MyClass.Log(1);
+        } catch (_uq_b) {
+            _uq_a = _uq_b;
+        }
+        MyClass.Log(2);
+        if (_uq_a != null) {
+            throw _uq_a;
+        };
+
+        MyClass.Log(3);
+    }
+
+    static function Log(eventCode) {
+    }
+}";
+
+            var compilationResult = await CompileAsync(input);
+            AreEqual(RemoveExtraSpaces(expected), RemoveExtraSpaces(compilationResult));
+        }
+
         private async Task<string> CompileAsync(string input)
         {
             var ws = new AdhocWorkspace();
@@ -370,6 +451,17 @@ class Other.Sub.MyClass {
             StringBuilder resultBuilder = new StringBuilder();
             var context = new CompilationContext();
             var writer = new NodeWriter(model, resultBuilder, context);
+            foreach (var enumDeclarationSyntax in tree.GetRoot().DescendantNodesAndSelf().OfType<EnumDeclarationSyntax>())
+            {
+                var symbol = model.GetDeclaredSymbol(enumDeclarationSyntax);
+                if (context.MainAssembly == null)
+                {
+                    context.MainAssembly = symbol.ContainingAssembly;
+                }
+
+                writer.Write(enumDeclarationSyntax, symbol);
+            }
+
             foreach (var classDeclarationSyntax in tree.GetRoot().DescendantNodesAndSelf().OfType<ClassDeclarationSyntax>())
             {
                 var symbol = model.GetDeclaredSymbol(classDeclarationSyntax);

@@ -86,6 +86,52 @@ namespace CsNut
             return namespaceValue.ToString();
         }
 
+        internal static object Increase(object previousValue)
+        {
+            if (previousValue is int i)
+            {
+                return i + 1;
+            }
+            else if (previousValue is long l)
+            {
+                return l + 1l;
+            }
+            else if (previousValue is uint ui)
+            {
+                return ui + 1u;
+            }
+            else if (previousValue is ulong ul)
+            {
+                return ul + 1ul;
+            }
+            else if (previousValue is byte b)
+            {
+                return b + 1;
+            }
+            else if (previousValue is short s)
+            {
+                return s + 1;
+            }
+            else if (previousValue is ushort us)
+            {
+                return us + 1;
+            }
+            else if (previousValue is sbyte sb)
+            {
+                return sb + 1;
+            }
+            else if (previousValue is double d)
+            {
+                return d + 1d;
+            }
+            else if (previousValue is float f)
+            {
+                return f + 1f;
+            }
+
+            throw new NotSupportedException();
+        }
+
         private static string LongToString(ulong value)
         {
             StringBuilder sb = new StringBuilder();
